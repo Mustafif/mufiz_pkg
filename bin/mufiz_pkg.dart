@@ -64,18 +64,61 @@ void printUsage(ArgParser argParser) {
   print(argParser.usage);
 }
 
-List<String> rpmOSArgs(String os) =>
-    ["/c", "package_cloud", "push", "Mustafif/MufiZ/$os", "./rpm/*.rpm"];
-List<String> debOSArgs(String os) =>
-    ["/c", "package_cloud", "push", "Mustafif/MufiZ/$os", "./deb/*.deb"];
+List<String> rpmOSArgs(String os, String version) {
+  if (io.Platform.isWindows) {
+    return [
+      "/c",
+      "package_cloud",
+      "push",
+      "Mustafif/MufiZ/$os",
+      "./rpm/*$version*.rpm"
+    ];
+  } else {
+    // linux
+    return [
+      "-c",
+      "package_cloud",
+      "push",
+      "Mustafif/MufiZ/$os",
+      "./rpm/*$version*.rpm"
+    ];
+  }
+}
 
-Future<void> upload() async {
+List<String> debOSArgs(String os, String version) {
+  if (io.Platform.isWindows) {
+    return [
+      "/c",
+      "package_cloud",
+      "push",
+      "Mustafif/MufiZ/$os",
+      "./deb/*$version*.deb"
+    ];
+  } else {
+    // linux
+    return [
+      "-c",
+      "package_cloud",
+      "push",
+      "Mustafif/MufiZ/$os",
+      "./deb/*$version*.deb"
+    ];
+  }
+}
+
+Future<void> upload(String version) async {
+  String cmd;
+  if (io.Platform.isWindows) {
+    cmd = "cmd";
+  } else {
+    cmd = "sh";
+  }
   for (var os in debOS) {
-    final _ = io.Process.runSync("cmd", debOSArgs(os));
+    final _ = io.Process.run(cmd, debOSArgs(os, version));
   }
 
   for (var os in rpmOS) {
-    final _ = io.Process.runSync("cmd", rpmOSArgs(os));
+    final _ = io.Process.run(cmd, rpmOSArgs(os, version));
   }
 
   print("Finished Uploading!");
@@ -114,7 +157,8 @@ void main(List<String> arguments) async {
     }
 
     if (results.wasParsed('upload')) {
-      await upload();
+      final version = results.rest.first;
+      await upload(version);
     }
   } on FormatException catch (e) {
     // Print usage information if an invalid argument was provided.

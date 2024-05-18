@@ -18,7 +18,7 @@ class Package {
     return '';
   }
 
-  Future<void> save() async {
+  Future<void> download() async {
     var client = http.Client();
     var resp = await client.get(Uri.parse(link()));
     if (resp.statusCode == 200) {

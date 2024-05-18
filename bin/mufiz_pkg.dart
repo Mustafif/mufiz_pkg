@@ -1,5 +1,6 @@
 import 'package:args/args.dart';
-import 'download.dart';
+import 'pkg.dart';
+import 'dart:io' as io;
 
 const String version = '0.0.1';
 
@@ -25,6 +26,16 @@ const rpmArchs = [
   "mips",
   "riscv64"
 ];
+// ❯ package_cloud push Mustafif/MufiZ/fedora/39 *.rpm
+
+const debOS = [
+  "ubuntu/noble", // Ubuntu 24.04
+  "ubuntu/jammy", // Ubuntu 22.04
+  "debian/forky", // Debian 14
+  "debian/trixie", // Debain 13
+  "debian/bookworm" // Debian 12
+];
+const rpmOS = ["fedora/40", "fedora/39", "fedora/38", "opensuse/42.3"];
 
 ArgParser buildParser() {
   return ArgParser()
@@ -34,18 +45,16 @@ ArgParser buildParser() {
       negatable: false,
       help: 'Print this usage information.',
     )
-    ..addFlag(
-      'verbose',
-      abbr: 'v',
-      negatable: false,
-      help: 'Show additional command output.',
-    )
     ..addFlag("download",
-        negatable: false, help: "Downloads given MufiZ Version")
-    ..addFlag('upload', negatable: false, help: "Uploads given MufiZ Version")
+        abbr: 'd', negatable: false, help: "Downloads given MufiZ Version")
+    ..addFlag('upload',
+        abbr: 'u',
+        negatable: false,
+        help: "Uploads given MufiZ Deb/RPM Packages")
     ..addFlag(
       'version',
       negatable: false,
+      abbr: 'v',
       help: 'Print the tool version.',
     );
 }
@@ -55,12 +64,27 @@ void printUsage(ArgParser argParser) {
   print(argParser.usage);
 }
 
+List<String> rpmOSArgs(String os) =>
+    ["/c", "package_cloud", "push", "Mustafif/MufiZ/$os", "./rpm/*.rpm"];
+List<String> debOSArgs(String os) =>
+    ["/c", "package_cloud", "push", "Mustafif/MufiZ/$os", "./deb/*.deb"];
+
+Future<void> upload() async {
+  for (var os in debOS) {
+    final _ = io.Process.runSync("cmd", debOSArgs(os));
+  }
+
+  for (var os in rpmOS) {
+    final _ = io.Process.runSync("cmd", rpmOSArgs(os));
+  }
+
+  print("Finished Uploading!");
+}
+
 void main(List<String> arguments) async {
   final ArgParser argParser = buildParser();
   try {
     final ArgResults results = argParser.parse(arguments);
-    bool verbose = false;
-
     // Process the parsed arguments.
     if (results.wasParsed('help')) {
       printUsage(argParser);
@@ -70,29 +94,28 @@ void main(List<String> arguments) async {
       print('mufiz_pkg version: $version');
       return;
     }
-    if (results.wasParsed('verbose')) {
-      verbose = true;
-    }
 
     if (results.wasParsed("download")) {
       final version = results.rest.first;
 
       for (var arch in rpmArchs) {
+        print("Downloading RPM package for $arch");
         final rpm = RPM(arch, version);
-        await rpm.save();
+        await rpm.download();
       }
 
       for (var arch in debArchs) {
+        print("Downloading DEB package for $arch");
         final deb = Deb(arch, version);
-        await deb.save();
+        await deb.download();
       }
+
+      print("Finished Downloading!");
     }
 
-    // Act on the arguments provided.
-    // print('Positional arguments: ${results.rest}');
-    // if (verbose) {
-    //   print('[VERBOSE] All arguments: ${results.arguments}');
-    // }
+    if (results.wasParsed('upload')) {
+      await upload();
+    }
   } on FormatException catch (e) {
     // Print usage information if an invalid argument was provided.
     print(e.message);

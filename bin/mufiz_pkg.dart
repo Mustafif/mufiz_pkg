@@ -2,7 +2,7 @@ import 'package:args/args.dart';
 import 'pkg.dart';
 import 'dart:io' as io;
 
-const String version = '0.0.1';
+const String version = '0.0.2';
 
 const debArchs = [
   "amd64",
